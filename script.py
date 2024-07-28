@@ -67,4 +67,56 @@ async def get_balance(addresses, api_key):
     address_str = ','.join(addresses)
     url = f'https://api.etherscan.io/api?module=account&action=balancemulti&address={address_str}&tag=latest&apikey={api_key}'
     async with aiohttp.ClientSession() as session:
-        for _ in range(5):  #
+        for _ in range(5):  # Retry up to 5 times
+            try:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    return await response.json()
+            except aiohttp.ClientResponseError:
+                await asyncio.sleep(5)  # Non-blocking sleep
+            except aiohttp.ClientError as e:
+                print(f"Request error: {e}")
+                await asyncio.sleep(5)
+    return None
+
+# Function to process the balance response
+async def process_balance_response(response, count, no_of_accounts):
+    if response['status'] != '1':
+        return False
+    for index, rec in enumerate(response['result']):
+        hex_id = count - no_of_accounts + index
+        balance = int(rec['balance'])
+        address = rec['account']
+        if balance > 3000000000000000:
+            print(f"Found good balance, private-key {hex(hex_id)[2:].zfill(64)}")
+            discord_notification(f"Private Key: {hex(hex_id)[2:].zfill(64)}: balance: {balance / 1e18}")
+        elif balance > 0:
+            print(f"{hex_id} {address} {balance / 1e18}")
+    return True
+
+# Function to run the balance check process
+async def run(start, thread_index):
+    count = start
+    while count < start + check_in_thread:
+        addresses = [generate_address(count + i) for i in range(no_of_accounts)]
+        api_key = api_keys[thread_index % len(api_keys)]
+        response = await get_balance(addresses, api_key)
+        if response and await process_balance_response(response, count, no_of_accounts):
+            count += no_of_accounts
+        else:
+            await asyncio.sleep(5)
+
+# Function to run multiple threads
+async def run_multiple_threads():
+    tasks = []
+    global start_value
+    for thread_index in range(number_of_threads):
+        tasks.append(run(start_value, thread_index))
+        start_value += check_in_thread
+    await asyncio.gather(*tasks)
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(run_multiple_threads())
+    except Exception as e:
+        discord_notification(f"Server 01: Failed to run, restart it. {e}")

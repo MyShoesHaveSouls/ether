@@ -44,7 +44,8 @@ def worker(queue, api_keys_iter):
         api_key = next(api_keys_iter)
         balance = check_balance(address, api_key)
         if balance > MIN_BALANCE:
-            print(f'Match found! Address: {address}, Private Key: {private_key}, Balance: {balance} ETH')
+            formatted_balance = f"{balance:.8f}"
+            print(f'Match found! Address: {address}, Private Key: {private_key}, Balance: {formatted_balance} ETH')
         queue.task_done()
 
 def main(start, end, num_threads):

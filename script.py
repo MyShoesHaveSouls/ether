@@ -6,11 +6,14 @@ import itertools
 import time
 from decimal import Decimal, getcontext
 
-# Set precision high enough to avoid scientific notation
+# Set precision high enough to avoid scientific notati
 getcontext().prec = 18
 
 # Etherscan API keys (replace with your actual API keys)
 API_KEYS = [
+    '5K221ME7PYP5RUE1E1CBCB8WU2UV3EMKDS',
+    'QQVKPQFWG7X2NU67549KEEH2RMVJS3KCPW',
+    'JPPXZJ51MRYMKWBXMPCU266M6DNK8J5MXR',
     'F92Z14GE2DTF6PBBYY1YPHPJ438PT3P2VI',
     '4Q5U7HNF4CGTVTGEMGRV5ZU9WYNJ6N7YA5',
     'EX8K12JY7BCVG8RAUU8X2Z6QT2GCF5EYB4',
@@ -31,7 +34,7 @@ INTERVAL = 1.0 / REQUESTS_PER_SECOND
 BATCH_SIZE = 5  # Adjust as needed based on API rate limits
 
 # Minimum balance threshold in ETH for printing
-MIN_BALANCE = Decimal('0.01')
+MIN_BALANCE = Decimal('0.0001')
 
 # Function to generate Ethereum address from a private key
 def generate_address(private_key_int):

@@ -15,6 +15,7 @@ API_KEYS  = [
     'SH884AZJMKIFDMAPSMHTHJUQ3QIRPH827I',
     'PYM9U2QD949KZZX23QJ4YZRX3KC3PHAI88',
     'TDMPDZU8RD4V9FVB66P5S47QETEJ6R61UY'
+]
 
 # Function to generate Ethereum address from a private key
 def generate_address(private_key_int):

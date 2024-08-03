@@ -51,7 +51,7 @@ def process_batch(addresses, api_key):
     for address in addresses:
         balance = check_balance(address, api_key)
         balances[address] = balance
-        time.sleep(INTERVAL)  # Rate limit the requests
+        time.sleep(INTERVAL)  # Rate limit te requests
     return balances
 
 # Worker function for processing a batch of addresses
@@ -63,7 +63,7 @@ def worker(batch_queue, api_keys_iter):
         balances = process_batch(addresses, api_key)
         for address, balance in balances.items():
             if balance >= MIN_BALANCE:
-                formatted_balance = f"{balance:.8f}".rstrip('0').rstrip('.')
+                formatted_balance = f"{balance:.16f}".rstrip('0').rstrip('.')
                 print(f'Match found! Address: {address}, Balance: {formatted_balance} ETH')
         batch_queue.task_done()
         time.sleep(INTERVAL)  # Rate limit the requests

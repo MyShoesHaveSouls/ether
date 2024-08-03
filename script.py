@@ -3,6 +3,10 @@ import requests
 from eth_account import Account
 from queue import Queue
 import itertools
+from decimal import Decimal, getcontext
+
+# Set precision high enough to avoid scientific notation
+getcontext().prec = 18
 
 # Etherscan API keys (replace with your actual API keys)
 API_KEYS = [
@@ -30,11 +34,11 @@ def check_balance(address, api_key):
     response = requests.get(url)
     data = response.json()
     if data['status'] == '1':
-        return int(data['result']) / 1e18  # Convert wei to ether
-    return 0
+        return Decimal(data['result']) / Decimal(1e18)  # Convert wei to ether using Decimal
+    return Decimal(0)
 
 # Minimum balance threshold in ETH for printing
-MIN_BALANCE = 0.0  # Set to desired value, e.g., 0.1 ETH for a minimum balance of 0.1 ETH
+MIN_BALANCE = Decimal('0.0')  # Set to desired value, e.g., 0.1 ETH for a minimum balance of 0.1 ETH
 
 # Worker function for threading
 def worker(queue, api_keys_iter):
@@ -44,7 +48,7 @@ def worker(queue, api_keys_iter):
         api_key = next(api_keys_iter)
         balance = check_balance(address, api_key)
         if balance > MIN_BALANCE:
-            formatted_balance = f"{balance:.8f}"
+            formatted_balance = f"{balance:.8f}".rstrip('0').rstrip('.')
             print(f'Match found! Address: {address}, Private Key: {private_key}, Balance: {formatted_balance} ETH')
         queue.task_done()
 

@@ -25,7 +25,7 @@ def generate_address(private_key_int):
 
 # Function to check the balance of an Ethereum address using Etherscan API
 def check_balance(address):
-    url = f"https://api.etherscan.io/api?module=account&action=balance&address={address}&tag=latest&apikey={API_KEY}"
+    url = f"https://api.etherscan.io/api?module=account&action=balance&address={address}&tag=latest&apikey={API_KEYS}"
     response = requests.get(url)
     data = response.json()
     if data['status'] == '1':

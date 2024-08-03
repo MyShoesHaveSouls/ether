@@ -30,6 +30,9 @@ INTERVAL = 1.0 / REQUESTS_PER_SECOND
 # Batch size for processing addresses
 BATCH_SIZE = 5  # Adjust as needed based on API rate limits
 
+# Minimum balance threshold in ETH for printing
+MIN_BALANCE = Decimal('0.01')
+
 # Function to generate Ethereum address from a private key
 def generate_address(private_key_int):
     private_key = hex(private_key_int)[2:].zfill(64)
@@ -50,8 +53,9 @@ def process_batch(addresses, api_key):
     balances = {}
     for address in addresses:
         balance = check_balance(address, api_key)
-        balances[address] = balance
-        time.sleep(INTERVAL)  # Rate limit te requests
+        if balance > Decimal(0):  # Filter out zero balances
+            balances[address] = balance
+        time.sleep(INTERVAL)  # Rate limit the requests
     return balances
 
 # Worker function for processing a batch of addresses
@@ -63,7 +67,7 @@ def worker(batch_queue, api_keys_iter):
         balances = process_batch(addresses, api_key)
         for address, balance in balances.items():
             if balance >= MIN_BALANCE:
-                formatted_balance = f"{balance:.16f}".rstrip('0').rstrip('.')
+                formatted_balance = f"{balance:.8f}".rstrip('0').rstrip('.')
                 print(f'Match found! Address: {address}, Balance: {formatted_balance} ETH')
         batch_queue.task_done()
         time.sleep(INTERVAL)  # Rate limit the requests
@@ -92,5 +96,4 @@ if __name__ == "__main__":
     end_value = int(input("Enter the ending value (integer): "))
     num_threads = int(input("Enter the number of threads to use: "))
     
-    MIN_BALANCE = Decimal('0.0')  # Set the minimum balance threshold to print
     main(start_value, end_value, num_threads)

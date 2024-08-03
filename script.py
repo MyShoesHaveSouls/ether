@@ -33,14 +33,19 @@ def check_balance(address):
     return 0
 
 # Worker function for threading
+# Minimum balance threshold in ETH for printing
+MIN_BALANCE = 0.0  # Set to desired value, e.g., 0.1 ETH for a minimum balance of 0.1 ETH
+
+# Worker function for threading
 def worker(queue):
     while not queue.empty():
         private_key_int = queue.get()
         address, private_key = generate_address(private_key_int)
         balance = check_balance(address)
-        if balance > 0:
+        if balance > MIN_BALANCE:
             print(f'Match found! Address: {address}, Private Key: {private_key}, Balance: {balance} ETH')
         queue.task_done()
+
 
 def main(start, end, num_threads):
     queue = Queue()

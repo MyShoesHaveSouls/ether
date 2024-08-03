@@ -92,5 +92,5 @@ if __name__ == "__main__":
     end_value = int(input("Enter the ending value (integer): "))
     num_threads = int(input("Enter the number of threads to use: "))
     
-    MIN_BALANCE = Decimal('0.01')  # Set the minimum balance threshold to print
+    MIN_BALANCE = Decimal('0.0')  # Set the minimum balance threshold to print
     main(start_value, end_value, num_threads)

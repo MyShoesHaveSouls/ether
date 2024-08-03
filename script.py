@@ -70,8 +70,12 @@ async def get_balance(addresses, api_key):
                 async with session.get(url) as response:
                     response.raise_for_status()
                     return await response.json()
-            except aiohttp.ClientError:
+            except aiohttp.ClientError as e:
+                print(f"Client error occurred: {e}")
                 await asyncio.sleep(5)  # Non-blocking sleep
+            except Exception as e:
+                print(f"Error occurred while fetching balance: {e}")
+                await asyncio.sleep(5)
     return None
 
 # Function to process the balance response
@@ -90,13 +94,16 @@ async def process_balance_response(response, count, no_of_accounts):
 async def run(start, thread_index):
     count = start
     while count < start + check_in_thread:
-        addresses = [generate_address(count + i) for i in range(no_of_accounts)]
-        api_key = api_keys[thread_index % len(api_keys)]
-        response = await get_balance(addresses, api_key)
-        if response and await process_balance_response(response, count, no_of_accounts):
-            count += no_of_accounts
-        else:
-            await asyncio.sleep(5)
+        try:
+            addresses = [generate_address(count + i) for i in range(no_of_accounts)]
+            api_key = api_keys[thread_index % len(api_keys)]
+            response = await get_balance(addresses, api_key)
+            if response and await process_balance_response(response, count, no_of_accounts):
+                count += no_of_accounts
+            else:
+                await asyncio.sleep(5)
+        except Exception as e:
+            print(f"Error in thread {thread_index} at count {count}: {e}")
 
 # Function to run multiple threads
 async def run_multiple_threads():
@@ -110,4 +117,5 @@ if __name__ == "__main__":
     try:
         asyncio.run(run_multiple_threads())
     except Exception as e:
+        print(f"Unhandled exception: {e}")
         discord_notification(f"Server 01: Failed to run, restart it. {e}")
